@@ -1,0 +1,440 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        0
+      ],
+      "id": "2a089734-aca7-446d-a6e5-7eb8120c73c3",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "courses",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        592,
+        0
+      ],
+      "id": "98bd5678-d6a9-4d0a-a0db-7f59fcf0843e",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "url": "https://classroom.googleapis.com/v1/courses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        384,
+        0
+      ],
+      "id": "497cbde0-db24-437f-bfeb-ea46363e19b7",
+      "name": "Get Courses"
+    },
+    {
+      "parameters": {
+        "url": "=https://classroom.googleapis.com/v1/courses/{{ $json.id }}/courseWork",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        800,
+        0
+      ],
+      "id": "c7e1445e-ae60-4c10-b202-986c7e2607bc",
+      "name": "Get Course ASSIGNMENTS",
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "vY4zz3RWZ12r9Mi1",
+          "name": "Google account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.courseWork[0].materials[0].driveFile.driveFile.id }}?alt=media",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1008,
+        0
+      ],
+      "id": "2ab73955-e11a-4ee1-adb8-8c0505d73943",
+      "name": "Download PDF from Drive",
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "vY4zz3RWZ12r9Mi1",
+          "name": "Google account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "0243632e-5220-4f2d-8fac-db1c13bc40ab",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:1b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        208
+      ],
+      "id": "cd0ce86b-8977-42de-b1e3-67ad304395ea",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "SMDTaLakBt3QTd7C",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1RvoFOA90o33ioaFWS20vlY8i6vJ23kJ3ZhzvKBQ53Pg",
+          "mode": "list",
+          "cachedResultName": "SchedAI_Assignments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RvoFOA90o33ioaFWS20vlY8i6vJ23kJ3ZhzvKBQ53Pg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RvoFOA90o33ioaFWS20vlY8i6vJ23kJ3ZhzvKBQ53Pg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Course Name": "={{ $('Split Out').item.json.name }}",
+            "Assignment Title": "={{ $('Get Course ASSIGNMENTS').item.json.courseWork[0].title }}",
+            "Summary": "={{ $('Summarization Node').item.json.text.split('\\n').slice(1).join('\\n').trim() }}",
+            "Estimated Time": "={{ $json.text }}"
+          },
+          "matchingColumns": [
+            "Assignment Title"
+          ],
+          "schema": [
+            {
+              "id": "Course Name",
+              "displayName": "Course Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assignment Title",
+              "displayName": "Assignment Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estimated Time",
+              "displayName": "Estimated Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2560,
+        0
+      ],
+      "id": "67f2c1ff-3a14-4d75-a8cc-e48eb5adab72",
+      "name": "Append or update row in sheet"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2352,
+        0
+      ],
+      "id": "32e3881e-8af1-48c1-ba60-6bf997a80c08",
+      "name": "Wait",
+      "webhookId": "a6289f3b-46ae-4d44-a51a-29a8741cda19"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:1b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        192
+      ],
+      "id": "7372cd84-f683-40df-8f34-9e86013fe621",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "SMDTaLakBt3QTd7C",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1776,
+        0
+      ],
+      "id": "ace6ce73-3817-4f85-a337-4af7ff0e2d50",
+      "name": "Wait1",
+      "webhookId": "a6289f3b-46ae-4d44-a51a-29a8741cda19"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Based on these instructions, provide ONLY a single estimated time range for a skilled student (e.g., \"8 hours\",\"10 hours\"). Do not explain your reasoning.\n\nInstructions:\n{{ $json.text }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2032,
+        0
+      ],
+      "id": "64c3761e-56de-4e80-b411-5627a475463d",
+      "name": "Estimation Node",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Summarize the core tasks of this assignment into 3-4 bullet points. No conversational filler.\n\nInstructions:\n{{ $json.text }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1424,
+        0
+      ],
+      "id": "972a3faa-e670-4082-bd71-6e9141b128ea",
+      "name": "Summarization Node",
+      "retryOnFail": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Courses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Get Course ASSIGNMENTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Courses": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Course ASSIGNMENTS": {
+      "main": [
+        [
+          {
+            "node": "Download PDF from Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF from Drive": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Summarization Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarization Node",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Estimation Node",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Estimation Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estimation Node": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarization Node": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "",
+  "meta": {
+    "instanceId": "fdbe0d4eb1837106ccfe75a3bc38f159e502ade934a9c0613a43fdb5719abb98"
+  },
+  "id": "Yn40G3U4ZYpuEp9ALUw1A",
+  "tags": []
+}
